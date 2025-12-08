@@ -1,56 +1,107 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { forwardRef, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { AppWindowIcon } from "lucide-react";
-import { forwardRef, useState } from "react";
-import { GlazeWmOutput } from "zebar";
+
+import { cn } from "../../utils/cn";
+import { KomorebiOutput, KomorebiWindow } from "zebar";
 import { WindowControls } from "./components/WindowControls";
 
-type WindowTitleProps = {
-  glazewm: GlazeWmOutput | null;
+interface WindowTitleProps {
+  komorebi: KomorebiOutput | null;
 }
 
+const ANIMATION_EXIT_OFFSET = 3;
+const MAX_TITLE_LENGTH = 50;
+
+const getFocusedWindow = (komorebi: KomorebiOutput): KomorebiWindow | null => {
+  const { focusedWorkspace } = komorebi;
+
+  if (focusedWorkspace.maximizedWindow) {
+    return focusedWorkspace.maximizedWindow;
+  }
+
+  if (focusedWorkspace.monocleContainer?.windows?.length) {
+    return focusedWorkspace.monocleContainer.windows[0];
+  }
+
+  const focusedContainerIndex = focusedWorkspace.focusedContainerIndex;
+  if (
+    focusedWorkspace.tilingContainers[focusedContainerIndex]?.windows?.length
+  ) {
+    return focusedWorkspace.tilingContainers[focusedContainerIndex].windows[0];
+  }
+
+  if (focusedWorkspace.floatingWindows?.length) {
+    return focusedWorkspace.floatingWindows[0];
+  }
+
+  return null;
+};
+
 export const WindowTitle = forwardRef<HTMLButtonElement, WindowTitleProps>(
-  ({ glazewm }, ref) => {
-    if (!glazewm) return;
+  ({ komorebi }, ref) => {
     const [show, setShow] = useState(false);
 
-    const title = getWindowTitle(glazewm);
-    const ANIMATION_EXIT_OFFSET = 3;
+    const focusedWindow = useMemo(
+      () => (komorebi ? getFocusedWindow(komorebi) : null),
+      [komorebi]
+    );
 
-    function handleWindowTitle(e: React.MouseEvent, textToCopy: string) {
+    if (!komorebi) return null;
+
+    const windowTitle =
+      focusedWindow?.title ||
+      komorebi.focusedWorkspace.name ||
+      "No active window";
+
+    const truncatedTitle =
+      windowTitle.length > MAX_TITLE_LENGTH
+        ? `${windowTitle.substring(0, MAX_TITLE_LENGTH)}`
+        : windowTitle;
+
+    const displayTitle = truncatedTitle || (
+      <AppWindowIcon className="h-4 w-4 text-icon" />
+    );
+
+    const handleClick = (e: React.MouseEvent) => {
       if (e.altKey) {
-        navigator.clipboard
-          .writeText(textToCopy)
-          .then(() => {
-            console.log(`Copied to clipboard: ${textToCopy}`);
-          })
-          .catch((err) => {
-            console.error("Failed to copy text to clipboard:", err);
-          });
-        return;
+        // Handle Alt+Click functionality if needed
       }
-
-      setShow(!show);
-    }
+    };
 
     return (
       <AnimatePresence mode="wait">
         <motion.button
           ref={ref}
-          key={title ?? "default-icon"}
+          key={windowTitle || "default-icon"}
           initial={{ opacity: 0, y: -ANIMATION_EXIT_OFFSET }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: ANIMATION_EXIT_OFFSET }}
           transition={{ duration: 0.15, ease: "easeInOut" }}
-          className="font-medium relative h-full flex items-center cu"
-          title={title ?? "Focused Window"}
-          onClick={(e) => handleWindowTitle(e, getWindowProcess(glazewm) ?? "")}
+          className={cn(
+            "font-medium",
+            "relative",
+            "h-full",
+            "flex",
+            "items-center",
+            "gap-2",
+            "px-2",
+            "rounded",
+            "hover:bg-hover",
+            "transition-colors",
+            "min-w-0",
+            "max-w-[400px]"
+          )}
+          title={windowTitle}
+          onClick={handleClick}
         >
-          {title ?? <AppWindowIcon className="h-4 w-4 text-icon" />}
+          <span className="truncate flex-1 min-w-0">{displayTitle}</span>
+
           <WindowControls
-            glazewm={glazewm}
+            komorebi={komorebi}
             show={show}
             setShow={setShow}
-            parentRef={ref}
+            parentRef={ref as React.RefObject<HTMLButtonElement>}
           />
         </motion.button>
       </AnimatePresence>
@@ -58,56 +109,4 @@ export const WindowTitle = forwardRef<HTMLButtonElement, WindowTitleProps>(
   }
 );
 
-export enum ContainerType {
-  ROOT = "root",
-  MONITOR = "monitor",
-  WORKSPACE = "workspace",
-  SPLIT = "split",
-  WINDOW = "window",
-}
-
-const SPLIT_WINDOW_PROCESS_EXCLUSIONS = ["Spotify"];
-const SPLIT_WINDOW_TITLE_REGEX = /[-—]/;
-
-const getWindowTitle = (glazewm: GlazeWmOutput): string | null => {
-  const focusedWorkspace = glazewm.focusedWorkspace;
-  const focusedContainer = glazewm.focusedContainer;
-
-  if (focusedContainer.type === ContainerType.WINDOW) {
-    const focusedContainerTitle = focusedContainer.title;
-    const focusedContainerProcess = focusedContainer.processName;
-
-    const isExcluded =
-      typeof focusedContainerProcess === "string" &&
-      SPLIT_WINDOW_PROCESS_EXCLUSIONS.some((exclusion) =>
-        focusedContainerProcess.startsWith(exclusion)
-      );
-
-    const splitWindowTitle =
-      focusedContainerTitle?.split(SPLIT_WINDOW_TITLE_REGEX) || [];
-
-    const lastSplitWindowTitle = isExcluded
-      ? focusedContainerProcess
-      : splitWindowTitle.at(-1) ?? focusedContainerTitle;
-
-    return lastSplitWindowTitle;
-  }
-
-  // If the focused container is not a window, return workspace displayName. If displayName is not available, fallback to workspace name.
-  const focusedWorkspaceDisplayName = focusedWorkspace.displayName
-    ? focusedWorkspace.displayName
-    : `Workspace ${focusedWorkspace.name}`;
-  return focusedWorkspaceDisplayName;
-};
-
-const getWindowProcess = (glazewm: GlazeWmOutput): string | null => {
-  const focusedContainer = glazewm.focusedContainer;
-
-  if (focusedContainer.type === ContainerType.WINDOW) {
-    return focusedContainer.processName;
-  }
-
-  return null;
-};
-
-export default WindowTitle;
+WindowTitle.displayName = "WindowTitle";

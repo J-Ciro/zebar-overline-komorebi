@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { MediaSession } from "zebar";
+import { motion } from "framer-motion";
 
 export function ProgressBar({
   currentSession,
@@ -10,40 +11,53 @@ export function ProgressBar({
     currentSession?.position ?? 0
   );
 
-  useEffect(() => {
+  const progressPercentage = useMemo(() => 
+    currentSession
+      ? `${(progress / currentSession?.endTime) * 100 || 0}%`
+      : "0%",
+    [progress, currentSession]
+  );
+
+  const updateProgress = useCallback(() => {
     if (!currentSession?.position) {
       setProgress(0);
       return;
     }
 
     setProgress(currentSession.position);
+  }, [currentSession]);
+
+  useEffect(() => {
+    updateProgress();
 
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev < currentSession.endTime) {
-          if (!currentSession.isPlaying) {
-            return prev;
-          }
+        if (!currentSession?.isPlaying) return prev;
+        if (prev < (currentSession?.endTime ?? 0)) {
           return prev + 1;
-        } else {
-          setProgress(0);
-          clearInterval(interval);
-          return prev;
         }
+        clearInterval(interval);
+        return prev;
       });
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [currentSession, currentSession?.position]);
+  }, [currentSession, updateProgress]);
 
   return (
-    <div
-      className="absolute h-[1.5px] bg-primary bottom-0 left-0 transition-[width] duration-200 ease-out"
+    <motion.div
+      className="absolute h-[2px] bg-primary/80 bottom-0 left-0"
       style={{
-        width: currentSession
-          ? `${(progress / currentSession?.endTime) * 100 || 0}%`
-          : "0",
+        width: progressPercentage,
       }}
-    ></div>
+      initial={{ width: 0 }}
+      animate={{ width: progressPercentage }}
+      transition={{
+        type: "spring",
+        stiffness: 100,
+        damping: 30,
+        mass: 0.5,
+      }}
+    />
   );
 }

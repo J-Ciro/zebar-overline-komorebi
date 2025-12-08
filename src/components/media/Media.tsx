@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { MediaOutput } from "zebar";
 import { cn } from "../../utils/cn";
 import { Chip } from "../common/Chip";
@@ -11,66 +11,94 @@ export const TitleDetailsMemo = React.memo(TitleDetails);
 
 type MediaProps = {
   media: MediaOutput | null;
-}
+};
 // To allow cycling of Media sessions with Alt+Click we have to handle our own current session
 // This is why there are two current sessions defined here:
 // zebarCurrentSession: The actual session given from the Media provider.
 // currentSession: Our own local state of Zebar session.
 // This is not ideal and hopefully future Zebar releases will provide a way to change sessions internally.
 export default function Media({ media }: MediaProps) {
-  if (!media) return;
-  const { allSessions, togglePlayPause, next, previous, currentSession: zebarCurrentSession } = media;
-  const zebarCurrentSessionIdx = allSessions.findIndex((s) => s.sessionId === zebarCurrentSession?.sessionId);
-  const [currentSessionIdx, setCurrentSessionIdx] = React.useState<number>(zebarCurrentSessionIdx === -1 ? 0 : zebarCurrentSessionIdx);
-  const currentSession = allSessions[currentSessionIdx];
+  if (!media) return null;
 
-  const handlePlayPause = (e: React.MouseEvent, currentSessionIdx: number) => {
-    const currentSession = allSessions[currentSessionIdx];
+  const {
+    allSessions,
+    togglePlayPause,
+    next,
+    previous,
+    currentSession: zebarCurrentSession,
+  } = media;
+  const zebarCurrentSessionIdx = useMemo(
+    () =>
+      allSessions.findIndex(
+        (s) => s.sessionId === zebarCurrentSession?.sessionId
+      ),
+    [allSessions, zebarCurrentSession?.sessionId]
+  );
 
-    if (e.shiftKey) {
-      previous({ sessionId: currentSession?.sessionId });
-      return;
-    }
+  const [currentSessionIdx, setCurrentSessionIdx] = React.useState<number>(
+    zebarCurrentSessionIdx === -1 ? 0 : zebarCurrentSessionIdx
+  );
 
-    if (e.ctrlKey) {
-      next({ sessionId: currentSession?.sessionId });
-      return;
-    }
+  const currentSession = useMemo(
+    () => allSessions[currentSessionIdx],
+    [allSessions, currentSessionIdx]
+  );
 
-    if (e.altKey) {
-      if (currentSessionIdx < allSessions.length - 1) {
-        setCurrentSessionIdx((prev) => prev + 1);
-      } else {
-        setCurrentSessionIdx(0);
+  const handlePlayPause = useCallback(
+    (e: React.MouseEvent, currentSessionIdx: number) => {
+      const currentSession = allSessions[currentSessionIdx];
+
+      if (e.shiftKey) {
+        previous({ sessionId: currentSession?.sessionId });
+        return;
       }
-      return;
-    }
 
-    if (currentSession) {
-      togglePlayPause({ sessionId: currentSession.sessionId });
-    }
-  };
+      if (e.ctrlKey) {
+        next({ sessionId: currentSession?.sessionId });
+        return;
+      }
+
+      if (e.altKey) {
+        setCurrentSessionIdx((prev) =>
+          prev < allSessions.length - 1 ? prev + 1 : 0
+        );
+        return;
+      }
+
+      if (currentSession) {
+        togglePlayPause({ sessionId: currentSession.sessionId });
+      }
+    },
+    [allSessions, next, previous, togglePlayPause]
+  );
+
+  const buttonClassName = useMemo(
+    () =>
+      cn("flex gap-2 select-none cursor-pointer outline-none relative h-full"),
+    []
+  );
+
+  const chipClassName = useMemo(
+    () =>
+      cn(
+        "relative flex gap-2 select-none cursor-pointer overflow-clip group",
+        "active:bg-background-deeper/90"
+      ),
+    []
+  );
 
   return (
     <button
-      className={
-        "flex gap-2 select-none cursor-pointer outline-none relative h-full"
-      }
-      onClick={(e) => {
-        handlePlayPause(e, currentSessionIdx);
-      }}
+      className={buttonClassName}
+      onClick={(e) => handlePlayPause(e, currentSessionIdx)}
     >
       <ConditionalPanel sessionActive={!!currentSession}>
-        <Chip
-          className={cn(
-            "relative flex gap-2 select-none cursor-pointer overflow-clip group",
-            "active:bg-background-deeper/90"
-          )}
-        >
+        <Chip className={chipClassName}>
           <Status isPlaying={currentSession?.isPlaying ?? false} />
-          <TitleDetails
+          <TitleDetailsMemo
             title={currentSession?.title}
             artist={currentSession?.artist}
+            isPlaying={currentSession?.isPlaying ?? false}
           />
           <ProgressBar currentSession={currentSession} />
         </Chip>

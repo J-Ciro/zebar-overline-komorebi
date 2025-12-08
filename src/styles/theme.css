@@ -1,21 +1,53 @@
 :root {
-  --border: oklch(0.35 0.024 261.7);
-  --background: oklch(0.25 0.013 261.7);
-  --background-deeper: oklch(0.15 0.008 261.7);
-  --button: oklch(0.35 0.019 261.7);
-  --button-border: oklch(0.45 0.024 261.7);
-
-  /* Primary Colors */
-  --primary: oklch(0.542 0.041 248.7);
-  --primary-border: oklch(0.623 0.047 248.7);
-
+  /* Background Colors */
+  --background: #2c2c2c;
+  --background-deeper: #1f1f1f;
+  --background-subtle: #444444;
+  
+  /* Border Colors */
+  --border: #3a3a3a4d;
+  --app-border: #3a3a3a4d;
+  
   /* Text and Icon Colors */
-  --text: oklch(0.95 0.003 261.7);
-  --text-muted: oklch(0.85 0.009 261.7);
-  --icon: oklch(0.75 0.015 261.7);
-
+  --text: #e0e0e0;
+  --text-muted: #b0b0b0;
+  --icon: #b0b0b0;
+  
+  /* Button Colors */
+  --button: #2c2c2c;
+  --button-border: #3a3a3a4d;
+  
+  /* Primary Colors */
+  --primary: #313131;
+  --primary-border: #313131;
+  
   /* Feedback Colors */
-  --success: #a3be8c;
-  --danger: #bf616a;
-  --warning: #d08770;
+  --success: #868e79;
+  --danger: #a55a5a;
+  --warning: #b38b6d;
+}
+
+/* Subtle glass effect for chips */
+.backdrop-blur-sm {
+  backdrop-filter: blur(4px);
+}
+
+.backdrop-blur-md {
+  backdrop-filter: blur(8px);
+}
+
+.backdrop-blur-xl {
+  backdrop-filter: blur(16px);
+}
+
+/* Smooth transitions */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Subtle shadow for depth */
+.shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }

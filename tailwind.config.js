@@ -1,38 +1,43 @@
 /** @type {import('tailwindcss').Config} */
 
-// Allows opacity with OKLCH values. (i.e. bg-background/80)
-function withOpacity(variableName) {
-  return ({ opacityValue }) => {
-    if (opacityValue === 100)
-      return `var(${variableName})`
-    return `color-mix(in srgb, var(${variableName}) calc(${opacityValue} * 100%), transparent)`
-  }
-}
+import twGlow from "twglow";
 
-// When extending colours, withOpacity() allows support for transparency.
-// Actual colours are defined in /src/styles/themes.css
 export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-        background: withOpacity("--background"),
-        border: withOpacity("--border"),
-        "background-deeper": withOpacity("--background-deeper"),
-        button: withOpacity("--button"),
-        "button-border": withOpacity("--button-border"),
-        primary: withOpacity("--primary"),
-        "primary-border": withOpacity("--primary-border"),
-        text: withOpacity("--text"),
-        "text-muted": withOpacity("--text-muted"),
-        icon: withOpacity("--icon"),
-        success: "var(--success)",
-        danger: "var(--danger)",
-        warning: "var(--warning)",
+        // Background
+        background: "#2c2c2c",
+        "background-deeper": "#1f1f1f",
+        "background-subtle": "#444444",
+        
+        // Borders
+        border: "#3a3a3a4d",
+        "app-border": "#3a3a3a4d",
+        
+        // Buttons
+        button: "#2c2c2c",
+        "button-border": "#3a3a3a4d",
+        
+        // Primary
+        primary: "#313131",
+        "primary-border": "#313131",
+        
+        // Text
+        text: "#e0e0e0",
+        "text-muted": "#b0b0b0",
+        icon: "#b0b0b0",
+        
+        // Feedback
+        success: "#868e79",
+        danger: "#a55a5a",
+        warning: "#b38b6d"
       },
       fontFamily: {
         mono: ["Geist Mono", "monospace"],
       },
     },
   },
-};
+  plugins: [twGlow],
+}

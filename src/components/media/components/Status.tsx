@@ -1,22 +1,25 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowDownUp, Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { usePlayPause } from "../../../utils/usePlayPause";
+import { cn } from "../../../utils/cn";
 
 export enum PlayPauseState {
   Played = "played",
-  Paused = "paused",
 }
 
 export enum StatusAction {
   Previous = "previous",
   Next = "next",
-  Switch = "switch",
 }
 
-export function Status({ isPlaying }: { isPlaying: boolean }) {
-  const { isPlaying: state, statusAction: trackAction } =
-    usePlayPause(isPlaying);
+const iconVariants = {
+  initial: { opacity: 0, scale: 0.5 },
+  animate: { opacity: 1, scale: 1.1 },
+  exit: { opacity: 0, scale: 0.5 }
+};
 
+export function Status({ isPlaying }: { isPlaying: boolean }) {
+  const { isPlaying: state, statusAction: trackAction } = usePlayPause(isPlaying);
   const icon = getIcon(trackAction, state);
   const key = trackAction ?? (state ? "pause" : "play");
 
@@ -24,10 +27,17 @@ export function Status({ isPlaying }: { isPlaying: boolean }) {
     <AnimatePresence mode="popLayout">
       <motion.div
         key={key}
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1.1 }} // 1.1 to mitigate the blurry icon
-        exit={{ opacity: 0, scale: 0.5 }}
-        transition={{ duration: 0.2 }}
+        variants={iconVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        transition={{ 
+          type: "spring",
+          stiffness: 300,
+          damping: 20,
+          mass: 0.5
+        }}
+        className="relative"
       >
         <PlayPauseIcon LucideIcon={icon} />
       </motion.div>
@@ -35,19 +45,23 @@ export function Status({ isPlaying }: { isPlaying: boolean }) {
   );
 }
 
-function getIcon(trackAction: StatusAction | null, isPlaying: boolean) {
-  if (trackAction) {
-    if (trackAction === StatusAction.Previous) {
-      return SkipBack;
-    } else if (trackAction === StatusAction.Next) {
-      return SkipForward;
-    } else if (trackAction === StatusAction.Switch) {
-      return ArrowDownUp;
-    }
-  }
-  return isPlaying ? Pause : Play;
+function getIcon(
+  trackAction: StatusAction | null,
+  state: boolean
+): typeof Play | typeof Pause | typeof SkipBack | typeof SkipForward | typeof ArrowDownUp {
+  if (trackAction === StatusAction.Previous) return SkipBack;
+  if (trackAction === StatusAction.Next) return SkipForward;
+  return state ? Pause : Play;
 }
 
-const PlayPauseIcon = ({ LucideIcon }: { LucideIcon: React.ElementType }) => (
-  <LucideIcon className="text-icon h-3 w-3" strokeWidth={3} />
-);
+function PlayPauseIcon({ LucideIcon }: { LucideIcon: typeof Play | typeof Pause | typeof SkipBack | typeof SkipForward | typeof ArrowDownUp }) {
+  return (
+    <LucideIcon
+      className={cn(
+        "h-3 w-3 text-icon",
+        "transition-colors duration-200"
+      )}
+      strokeWidth={3}
+    />
+  );
+}

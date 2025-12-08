@@ -1,31 +1,34 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Volume, Volume1, Volume2 } from "lucide-react";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "../../utils/cn";
 import { Chip } from "../common/Chip";
 import Slider from "./components/Slider";
 
-// TODO: Investigate AudioDevice type and why it's not exported. For now, just use any.
+interface VolumeControlProps {
+  playbackDevice: {
+    volume: number;
+  } | null;
+  setVolume: (volume: number) => void;
+  statIconClassnames: string;
+}
+
 export default function VolumeControl({
   playbackDevice,
   statIconClassnames,
   setVolume,
-}: {
-  playbackDevice: any;
-  setVolume: any;
-  statIconClassnames: "h-3 w-3 text-icon";
-}) {
+}: VolumeControlProps) {
   const [expanded, setExpanded] = useState(false);
   const ref = useRef<HTMLButtonElement>(null);
 
-  const handleWheel = (e: React.WheelEvent<HTMLButtonElement>) => {
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLButtonElement>) => {
     if (!playbackDevice) return;
 
     const delta = e.deltaY > 0 ? -3 : 3;
     setVolume(Math.min(Math.max(playbackDevice.volume + delta, 0), 100));
-  };
+  }, [playbackDevice, setVolume]);
 
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleClick = useCallback((e: React.MouseEvent<HTMLButtonElement>) => {
     if (!playbackDevice) return;
 
     if (e.shiftKey) {
@@ -33,25 +36,46 @@ export default function VolumeControl({
       return;
     }
 
-    setExpanded(!expanded);
-  };
+    setExpanded(prev => !prev);
+  }, [playbackDevice, setVolume]);
 
-  const renderIcon = () => {
+  const renderIcon = useCallback(() => {
     if (!playbackDevice) return null;
-    if (playbackDevice?.volume === 0) {
-      return (
-        <Volume className={statIconClassnames} size={16} strokeWidth={3} />
-      );
-    } else if (playbackDevice?.volume > 0 && playbackDevice?.volume < 60) {
-      return (
-        <Volume1 className={statIconClassnames} size={16} strokeWidth={3} />
-      );
+    
+    const volume = playbackDevice.volume;
+    const iconProps = {
+      className: cn(
+        statIconClassnames,
+        "transition-colors duration-200"
+      ),
+      size: 16,
+      strokeWidth: 3
+    };
+
+    if (volume === 0) {
+      return <Volume {...iconProps} />;
+    } else if (volume < 60) {
+      return <Volume1 {...iconProps} />;
     } else {
-      return (
-        <Volume2 className={statIconClassnames} size={16} strokeWidth={3} />
-      );
+      return <Volume2 {...iconProps} />;
     }
-  };
+  }, [playbackDevice, statIconClassnames]);
+
+  const chipClassName = useMemo(() => 
+    cn(
+      "outline-none px-2 pr-2.5",
+      "active:bg-background-deeper/50"
+    ),
+    []
+  );
+
+  const sliderContainerClassName = useMemo(() => 
+    cn(
+      "transition-all duration-200 ease-in-out mx-1 w-full",
+      expanded && "mx-1.5"
+    ),
+    [expanded]
+  );
 
   // Close the slider when clicking outside
   useEffect(() => {
@@ -73,17 +97,12 @@ export default function VolumeControl({
       as="button"
       onClick={handleClick}
       onWheel={handleWheel}
-      className="outline-none px-2 pr-2.5"
+      className={chipClassName}
     >
       <div className="flex items-center">
         <div>{renderIcon()}</div>
 
-        <div
-          className={cn(
-            "transition duration-200 ease-in-out mx-1 w-full",
-            expanded && "mx-1.5"
-          )}
-        >
+        <div className={sliderContainerClassName}>
           <AnimatePresence initial={false}>
             {expanded && (
               <motion.div
@@ -91,15 +110,27 @@ export default function VolumeControl({
                 animate={{ width: "auto", opacity: 1 }}
                 exit={{ width: 0, opacity: 0 }}
                 className="overflow-hidden"
-                transition={{ type: "spring", duration: 0.4, bounce: 0 }}
+                transition={{ 
+                  type: "spring", 
+                  duration: 0.4, 
+                  bounce: 0,
+                  stiffness: 200,
+                  damping: 20
+                }}
               >
-                <Slider value={playbackDevice.volume} setValue={setVolume} />
+                <Slider value={playbackDevice?.volume ?? 0} setValue={setVolume} />
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        <p>{playbackDevice?.volume}%</p>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          
+        >
+          {playbackDevice?.volume ?? 0}%
+        </motion.p>
       </div>
     </Chip>
   );

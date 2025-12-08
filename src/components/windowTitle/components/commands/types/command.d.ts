@@ -1,5 +1,5 @@
-import { GlazeWmOutput } from "zebar";
+import { KomorebiOutput } from "zebar";
 
 declare interface CommandProps {
-  glazewm: GlazeWmOutput | null;
+  komorebi: KomorebiOutput | null;
 }

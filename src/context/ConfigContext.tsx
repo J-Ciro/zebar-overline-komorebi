@@ -1,25 +1,31 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import {
   getFlowLauncherPath,
   getUseAutoTiling,
   getAutoTilingWebSocketUri,
-  getMediaMaxWidth
-} from '../utils/getFromEnv';
+  getMediaMaxWidth,
+} from "../utils/getFromEnv";
 
 interface ConfigContextType {
   flowLauncherPath: string;
   useAutoTiling: boolean;
-  autoTilingWebSocketUri: string;
+  // autoTilingWebSocketUri: string;
   mediaMaxWidth: string;
   isLoading: boolean;
 }
 
 const defaultConfig: ConfigContextType = {
-  flowLauncherPath: 'C:\\Program Files\\FlowLauncher\\Flow.Launcher.exe',
+  flowLauncherPath: "C:\\Program Files\\FlowLauncher\\Flow.Launcher.exe",
   useAutoTiling: false,
-  autoTilingWebSocketUri: 'ws://localhost:6123',
-  mediaMaxWidth: '400',
-  isLoading: true
+  // autoTilingWebSocketUri: 'ws://localhost:6123',
+  mediaMaxWidth: "400",
+  isLoading: true,
 };
 
 const ConfigContext = createContext<ConfigContextType>(defaultConfig);
@@ -36,23 +42,23 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
   useEffect(() => {
     const loadConfig = async () => {
       try {
-        const [flowLauncherPath, useAutoTiling, autoTilingWebSocketUri, mediaMaxWidth] = await Promise.all([
-          getFlowLauncherPath(),
-          getUseAutoTiling(),
-          getAutoTilingWebSocketUri(),
-          getMediaMaxWidth(),
-        ]);
+        const [flowLauncherPath, useAutoTiling, mediaMaxWidth] =
+          await Promise.all([
+            getFlowLauncherPath(),
+            getUseAutoTiling(),
+            // getAutoTilingWebSocketUri(),
+            getMediaMaxWidth(),
+          ]);
 
         setConfig({
           flowLauncherPath,
           useAutoTiling,
-          autoTilingWebSocketUri,
           mediaMaxWidth,
-          isLoading: false
+          isLoading: false,
         });
       } catch (error) {
-        console.error('Failed to load configuration:', error);
-        setConfig(prev => ({ ...prev, isLoading: false }));
+        console.error("Failed to load configuration:", error);
+        setConfig((prev) => ({ ...prev, isLoading: false }));
       }
     };
 
@@ -60,8 +66,6 @@ export const ConfigProvider: React.FC<ConfigProviderProps> = ({ children }) => {
   }, []);
 
   return (
-    <ConfigContext.Provider value={config}>
-      {children}
-    </ConfigContext.Provider>
+    <ConfigContext.Provider value={config}>{children}</ConfigContext.Provider>
   );
 };

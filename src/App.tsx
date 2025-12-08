@@ -1,123 +1,162 @@
-import { useEffect, useState } from "react";
+import {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  lazy,
+  Suspense,
+} from "react";
 import * as zebar from "zebar";
 import { Center } from "./components/Center";
-import { Chip } from "./components/common/Chip";
-import Media from "./components/media";
-import Stat from "./components/stat";
-import { weatherThresholds } from "./components/stat/defaults/thresholds";
 import { TilingControl } from "./components/TilingControl";
 import VolumeControl from "./components/volume";
 import { WindowTitle } from "./components/windowTitle/WindowTitle";
 import { WorkspaceControls } from "./components/WorkspaceControls";
 import "./styles/fonts.css";
-import { useAutoTiling } from "./utils/useAutoTiling";
-import { getWeatherIcon } from "./utils/weatherIcons";
 import Systray from "./components/systray";
+import { DateDisplay } from "./components/date/DateDisplay";
+import { SystemStats } from "./components/stat/SystemStats";
 
-const providers = zebar.createProviderGroup({
-  media: { type: "media" },
-  network: { type: "network" },
-  glazewm: { type: "glazewm" },
-  cpu: { type: "cpu" },
-  date: { type: "date", formatting: "EEE d MMM t", locale: "en-GB" },
-  memory: { type: "memory" },
-  weather: { type: "weather" },
-  audio: { type: "audio" },
-  systray: { type: "systray" },
-});
+const Media = lazy(() => import("./components/media/Media"));
+
+interface ProviderOutput {
+  media?: zebar.MediaOutput | null;
+  komorebi?: zebar.KomorebiOutput | null;
+  audio?: zebar.AudioOutput | null;
+  cpu?: zebar.CpuOutput | null;
+  memory?: zebar.MemoryOutput | null;
+  weather?: zebar.WeatherOutput | null;
+  date?: zebar.DateOutput | null;
+  systray?: zebar.SystrayOutput | null;
+}
 
 function App() {
-  const [output, setOutput] = useState(providers.outputMap);
+  const [output, setOutput] = useState<ProviderOutput>({});
+  const [providers] = useState(() =>
+    zebar.createProviderGroup({
+      media: { type: "media" },
+      komorebi: { type: "komorebi", refreshInterval: 1000 },
+      cpu: { type: "cpu" },
+      date: { type: "date", formatting: "EEE d MMM t h:mm a", locale: "en-US" },
+      memory: { type: "memory" },
+      weather: { type: "weather", latitude: 6.0108, longitude: -75.4275 },
+      audio: { type: "audio" },
+      systray: { type: "systray" },
+    })
+  );
 
+  // Configurar el manejo de output
   useEffect(() => {
-    providers.onOutput(() => setOutput(providers.outputMap));
-  }, []);
+    const handleOutput = () => {
+      setOutput({ ...providers.outputMap });
+    };
 
-  useAutoTiling();
+    providers.onOutput(handleOutput);
+
+    return () => {
+      // Limpieza opcional si es necesaria
+    };
+  }, [providers]);
 
   const statIconClassnames = "h-3 w-3 text-icon";
 
+  const formattedDate = useMemo(() => {
+    if (output?.date?.formatted) return output.date.formatted;
+
+    return new Intl.DateTimeFormat("en-US", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    })
+      .format(new Date())
+      .replace(/,/g, "");
+  }, [output?.date?.formatted]);
+
+  const handleMediaControls = useCallback(
+    (action: "toggle" | "next" | "previous") => {
+      switch (action) {
+        case "toggle":
+          output.media?.togglePlayPause?.();
+          break;
+        case "next":
+          output.media?.next?.();
+          break;
+        case "previous":
+          output.media?.previous?.();
+          break;
+      }
+    },
+    [output.media]
+  );
+
   return (
-    <div className="relative flex justify-between items-center bg-background/80 border border-button-border/80 backdrop-blur-3xl text-text h-full antialiased select-none rounded-lg font-mono py-1.5">
-      <div className="flex items-center gap-2 h-full z-10 pl-1.5">
+    <div className="drama-20 relative flex justify-between items-center bg-background backdrop-blur-3xl text-text h-full antialiased select-none border rounded-lg border-app-border font-mono py-1.5 transition-all duration-300 ease-in-out hover:border-app-border/50">
+      <div className="flex items-center gap-2 h-full z-10">
         <div className="flex items-center gap-1.5 h-full">
-          <TilingControl glazewm={output.glazewm} />
+          <TilingControl komorebi={output.komorebi ?? null} />
         </div>
         <div className="flex items-center gap-2 h-full">
-          <WorkspaceControls glazewm={output.glazewm} />
+          <WorkspaceControls komorebi={output.komorebi ?? null} />
         </div>
         <div className="flex items-center justify-center gap-2 h-full">
-          <Media media={output.media} />
+          <Suspense
+            fallback={
+              <div className="w-[300px] h-full bg-background animate-pulse rounded" />
+            }
+          >
+            <Media
+              media={
+                output.media
+                  ? {
+                      ...output.media,
+                      togglePlayPause: () => handleMediaControls("toggle"),
+                      next: () => handleMediaControls("next"),
+                      previous: () => handleMediaControls("previous"),
+                    }
+                  : null
+              }
+            />
+          </Suspense>
         </div>
       </div>
 
       <div className="absolute w-full h-full flex items-center justify-center left-0">
         <Center>
-          <WindowTitle glazewm={output.glazewm} />
+          <WindowTitle komorebi={output.komorebi ?? null} />
         </Center>
       </div>
 
       <div className="flex gap-2 items-center h-full z-10">
         <div className="flex items-center h-full">
-          {/* TODO: Extract to component */}
-          <Chip
-            className="flex items-center gap-3 h-full"
-            as="button"
-            onClick={() => {
-              output.glazewm?.runCommand("shell-exec taskmgr");
-            }}
-          >
-            {output.cpu && (
-              <Stat
-                Icon={<p className="font-medium text-icon">CPU</p>}
-                stat={`${Math.round(output.cpu.usage)}%`}
-                type="ring"
-              />
-            )}
-
-            {output.memory && (
-              <Stat
-                Icon={<p className="font-medium text-icon">RAM</p>}
-                stat={`${Math.round(output.memory.usage)}%`}
-                type="ring"
-              />
-            )}
-
-            {output.weather && (
-              <Stat
-                Icon={getWeatherIcon(output.weather, statIconClassnames)}
-                stat={`${Math.round(output.weather.celsiusTemp)}°C`}
-                threshold={weatherThresholds}
-                type="inline"
-              />
-            )}
-          </Chip>
-        </div>
-
-        <div className="flex items-center h-full">
           <VolumeControl
-            playbackDevice={output.audio?.defaultPlaybackDevice}
-            setVolume={output.audio?.setVolume}
+            playbackDevice={
+              output.audio?.defaultPlaybackDevice
+                ? { volume: output.audio.defaultPlaybackDevice.volume }
+                : null
+            }
+            setVolume={output.audio?.setVolume ?? (() => {})}
             statIconClassnames={statIconClassnames}
           />
         </div>
 
+        <div className="flex items-center h-full">
+          <SystemStats
+            cpu={output.cpu}
+            memory={output.memory}
+            weather={output.weather}
+            statIconClassnames={statIconClassnames}
+          />
+        </div>
 
         <div className="h-full flex items-center px-0.5 pr-1">
-          <Systray systray={output.systray} />
+          {/* <Systray systray={output.systray ?? null} /> */}
         </div>
 
         <div className="h-full flex items-center justify-center pr-2">
-          {output?.date?.formatted ??
-            new Intl.DateTimeFormat("en-GB", {
-              weekday: "short", // EEE
-              day: "numeric", // d
-              month: "short", // MMM
-              hour: "numeric", // t (hour part)
-              minute: "numeric", // t (minute part)
-            })
-              .format(new Date())
-              .replace(/,/g, "")}
+          <DateDisplay formattedDate={formattedDate} />
         </div>
       </div>
     </div>

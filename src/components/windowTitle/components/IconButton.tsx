@@ -1,18 +1,13 @@
-import { LucideIcon } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "../../../utils/cn";
-import {
-  motion,
-  AnimatePresence,
-  HTMLMotionProps,
-  animate,
-} from "framer-motion";
-import React from "react";
+import { smoothAnimations } from "../../../utils/animations";
 
-interface IconButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface IconButtonProps {
   icon: LucideIcon;
   animateKey?: string;
-  animateProps?: HTMLMotionProps<"div">;
+  animateProps?: any;
+  [key: string]: any;
 }
 
 // TODO: Shares same animation as Status. Maybe extract to a component?
@@ -32,7 +27,7 @@ export const IconButton = ({
       className={cn(
         "h-full flex items-center justify-center text-icon",
         "hover:text-text",
-        "transition-colors duration-200 ease-in-out"
+        "transition-colors duration-300 ease-out"
       )}
       {...props}
     >
@@ -40,12 +35,12 @@ export const IconButton = ({
         <AnimatePresence mode="popLayout">
           <motion.div
             key={animateKey}
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{ opacity: 1, scale: 1.1 }} // 1.1 to mitigate the blurry icon
-            exit={{ opacity: 0, scale: 0.5 }}
-            whileHover={{ scale: 1.2 }}
-            whileTap={{ scale: 0.9 }}
-            transition={{ duration: 0.2 }}
+            variants={smoothAnimations.scaleInOut}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            whileHover={smoothAnimations.hoverScale}
+            whileTap={smoothAnimations.tapScale}
             {...animateProps}
           >
             {renderInner(Icon)}

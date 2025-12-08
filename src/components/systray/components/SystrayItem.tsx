@@ -1,4 +1,5 @@
 import { SystrayIcon, SystrayOutput } from "zebar";
+import { motion } from "framer-motion";
 
 const buttonType = {
   "LEFT": 0,
@@ -30,20 +31,60 @@ export function SystrayItem({ icon, systray }: SystrayItemProps) {
   }
 
   return (
-    <button
+    <motion.button
       className="h-4 w-4 flex items-center justify-center"
       onMouseDown={(e) => handleClick(e)}
-      // Toggle firing right click event so it can use the trayicons one
       onContextMenu={(e) => { e.preventDefault() }}
       onMouseEnter={() => systray.onHoverEnter(icon.id)}
       onMouseMove={() => systray.onHoverMove(icon.id)}
       onMouseLeave={() => systray.onHoverLeave(icon.id)}
       title={icon.tooltip}
+      style={{
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale',
+        textRendering: 'optimizeLegibility',
+        backfaceVisibility: 'hidden',
+        transform: 'translateZ(0)',
+        perspective: '1000px',
+        willChange: 'transform',
+        imageRendering: 'crisp-edges'
+      }}
+      whileHover={{ 
+        scale: 1.1,
+        transition: {
+          type: "spring",
+          stiffness: 400,
+          damping: 10
+        }
+      }}
+      whileTap={{ 
+        scale: 0.95,
+        transition: {
+          type: "spring",
+          stiffness: 400,
+          damping: 10
+        }
+      }}
     >
-      <img
+      <motion.img
         src={icon.iconUrl}
-        className="h-4 w-4"
+        className="h-4 w-4 select-none filter grayscale"
+        style={{
+          imageRendering: 'crisp-edges',
+          WebkitBackfaceVisibility: 'hidden',
+          backfaceVisibility: 'hidden',
+          transform: 'translateZ(0)',
+          willChange: 'transform'
+        }}
+        whileHover={{ 
+          filter: "grayscale(0%)",
+          transition: {
+            duration: 0.2,
+            ease: "easeInOut"
+          }
+        }}
+        alt=""
       />
-    </button>
+    </motion.button>
   )
 }
