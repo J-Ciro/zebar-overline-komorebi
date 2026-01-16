@@ -7,7 +7,7 @@ type SystrayProps = {
   systray: SystrayOutput | null;
 }
 
-export default function Systray({ systray }: SystrayProps) {
+export function Systray({ systray }: SystrayProps) {
   if (!systray) return;
   const icons = systray.icons;
   const [expanded, setExpanded] = useState(false);

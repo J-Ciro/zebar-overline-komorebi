@@ -1,12 +1,13 @@
+import React, { useMemo } from "react";
 import { motion } from "framer-motion";
-import { useMemo } from "react";
 import { cn } from "../../utils/cn";
+import { useAnimation } from "../../utils/useAnimation";
 
 interface DateDisplayProps {
   formattedDate: string;
 }
 
-export function DateDisplay({ formattedDate }: DateDisplayProps) {
+export const DateDisplay = React.memo(function DateDisplay({ formattedDate }: DateDisplayProps) {
   const [weekday, day, month, time] = useMemo(() => {
     return formattedDate.split(" ");
   }, [formattedDate]);
@@ -23,23 +24,16 @@ export function DateDisplay({ formattedDate }: DateDisplayProps) {
     []
   );
 
+  const { getAnimationProps, createDelayedAnimation } = useAnimation();
+
   return (
     <motion.div
       className={containerClassName}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{
-        type: "spring",
-        stiffness: 200,
-        damping: 20,
-        mass: 0.5,
-      }}
+      {...getAnimationProps('slideUp', 'smooth')}
     >
       <motion.div
         className="flex items-center gap-1"
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.1 }}
+        {...createDelayedAnimation('slideRight', 0.1, 'quick')}
       >
         <span className="text-text/75 text-[11px] font-medium">{weekday}</span>
         <span className="text-text/75 text-[11px] font-medium">{day}</span>
@@ -48,9 +42,7 @@ export function DateDisplay({ formattedDate }: DateDisplayProps) {
 
       <motion.div
         className="flex items-center"
-        initial={{ opacity: 0, x: 10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.2 }}
+        {...createDelayedAnimation('slideLeft', 0.2, 'quick')}
       >
         <span className="text-text/75 text-[11px] font-medium ml-1">
           {time}
@@ -58,4 +50,4 @@ export function DateDisplay({ formattedDate }: DateDisplayProps) {
       </motion.div>
     </motion.div>
   );
-}
+});

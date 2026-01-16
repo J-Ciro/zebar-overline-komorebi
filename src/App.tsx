@@ -8,16 +8,58 @@ import {
 } from "react";
 import * as zebar from "zebar";
 import { Center } from "./components/Center";
-import { TilingControl } from "./components/TilingControl";
-import VolumeControl from "./components/volume";
-import { WindowTitle } from "./components/windowTitle/WindowTitle";
-import { WorkspaceControls } from "./components/WorkspaceControls";
+import { VolumeControl } from "./components/volume";
 import "./styles/fonts.css";
-import Systray from "./components/systray";
-import { DateDisplay } from "./components/date/DateDisplay";
-import { SystemStats } from "./components/stat/SystemStats";
+import { hasProviderOutputChanged } from "./utils/performance";
+import { withDefault, checkProviderOutput } from "./utils/safety";
 
-const Media = lazy(() => import("./components/media/Media"));
+const Media = lazy(() =>
+  import("./components/media/Media").then((module) => ({
+    default: module.Media,
+  })),
+);
+
+const WindowTitle = lazy(() =>
+  import("./components/windowTitle/WindowTitle").then((module) => ({
+    default: module.WindowTitle,
+  })),
+);
+
+const TilingControl = lazy(() =>
+  import("./components/TilingControl").then((module) => ({
+    default: module.TilingControl,
+  })),
+);
+
+const WorkspaceControls = lazy(() =>
+  import("./components/WorkspaceControls").then((module) => ({
+    default: module.WorkspaceControls,
+  })),
+);
+
+const Systray = lazy(() =>
+  import("./components/systray").then((module) => ({
+    default: module.Systray,
+  })),
+);
+
+const DateDisplay = lazy(() =>
+  import("./components/date/DateDisplay").then((module) => ({
+    default: module.DateDisplay,
+  })),
+);
+
+const SystemStats = lazy(() =>
+  import("./components/stat/SystemStats").then((module) => ({
+    default: module.SystemStats,
+  })),
+);
+
+const ErrorBoundary = lazy(() =>
+  import("./components/common/ErrorBoundary").then((module) => ({
+    default: module.ErrorBoundary,
+  })),
+);
 
 interface ProviderOutput {
   media?: zebar.MediaOutput | null;
@@ -42,19 +84,29 @@ function App() {
       weather: { type: "weather", latitude: 6.0108, longitude: -75.4275 },
       audio: { type: "audio" },
       systray: { type: "systray" },
-    })
+    }),
   );
 
   // Configurar el manejo de output
   useEffect(() => {
     const handleOutput = () => {
-      setOutput({ ...providers.outputMap });
+      setOutput((prevOutput) => {
+        const newOutput = { ...providers.outputMap };
+
+        // Only update state if meaningful changes occurred
+        if (hasProviderOutputChanged(prevOutput, newOutput)) {
+          return newOutput;
+        }
+
+        return prevOutput; // Skip update to prevent unnecessary re-renders
+      });
     };
 
     providers.onOutput(handleOutput);
 
     return () => {
-      // Limpieza opcional si es necesaria
+      // Note: Zebar ProviderGroup cleanup is handled automatically
+      // The comment here documents that we've considered cleanup
     };
   }, [providers]);
 
@@ -89,74 +141,158 @@ function App() {
           break;
       }
     },
-    [output.media]
+    [output.media],
   );
 
   return (
     <div className="drama-20 relative flex justify-between items-center bg-background backdrop-blur-3xl text-text h-full antialiased select-none border rounded-lg border-app-border font-mono py-1.5 transition-all duration-300 ease-in-out hover:border-app-border/50">
       <div className="flex items-center gap-2 h-full z-10">
         <div className="flex items-center gap-1.5 h-full">
-          <TilingControl komorebi={output.komorebi ?? null} />
-        </div>
-        <div className="flex items-center gap-2 h-full">
-          <WorkspaceControls komorebi={output.komorebi ?? null} />
-        </div>
-        <div className="flex items-center justify-center gap-2 h-full">
           <Suspense
             fallback={
-              <div className="w-[300px] h-full bg-background animate-pulse rounded" />
+              <div className="h-full w-24 bg-background-deeper/50 animate-pulse rounded" />
             }
           >
-            <Media
-              media={
-                output.media
-                  ? {
-                      ...output.media,
-                      togglePlayPause: () => handleMediaControls("toggle"),
-                      next: () => handleMediaControls("next"),
-                      previous: () => handleMediaControls("previous"),
-                    }
-                  : null
-              }
-            />
+            <TilingControl komorebi={withDefault(output.komorebi, null)} />
           </Suspense>
+        </div>
+        <div className="flex items-center gap-2 h-full">
+          <Suspense
+            fallback={
+              <div className="h-full w-32 bg-background-deeper/50 animate-pulse rounded" />
+            }
+          >
+            <WorkspaceControls komorebi={withDefault(output.komorebi, null)} />
+          </Suspense>
+        </div>
+        <div className="flex items-center gap-2 h-full">
+          <ErrorBoundary
+            fallback={
+              <div className="w-[300px] h-full bg-background-deeper/50 animate-pulse rounded flex items-center justify-center">
+                <span className="text-text/60 text-xs">Media unavailable</span>
+              </div>
+            }
+          >
+            <Suspense
+              fallback={
+                <div className="w-[300px] h-full bg-background animate-pulse rounded" />
+              }
+            >
+              <Media
+                media={
+                  output.media
+                    ? {
+                        ...output.media,
+                        togglePlayPause: () => handleMediaControls("toggle"),
+                        next: () => handleMediaControls("next"),
+                        previous: () => handleMediaControls("previous"),
+                      }
+                    : null
+                }
+              />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </div>
 
       <div className="absolute w-full h-full flex items-center justify-center left-0">
         <Center>
-          <WindowTitle komorebi={output.komorebi ?? null} />
+          <Suspense
+            fallback={
+              <div className="h-full w-48 bg-background-deeper/50 animate-pulse rounded flex items-center justify-center">
+                <span className="text-text/60 text-xs">Loading window...</span>
+              </div>
+            }
+          >
+            <WindowTitle komorebi={withDefault(output.komorebi, null)} />
+          </Suspense>
         </Center>
       </div>
 
       <div className="flex gap-2 items-center h-full z-10">
         <div className="flex items-center h-full">
-          <VolumeControl
-            playbackDevice={
-              output.audio?.defaultPlaybackDevice
-                ? { volume: output.audio.defaultPlaybackDevice.volume }
-                : null
-            }
-            setVolume={output.audio?.setVolume ?? (() => {})}
-            statIconClassnames={statIconClassnames}
-          />
+          <div className="flex items-center h-full">
+            <Suspense
+              fallback={
+                <div className="h-full w-24 bg-background-deeper/50 animate-pulse rounded flex items-center justify-center">
+                  <span className="text-text/60 text-xs">
+                    Loading volume...
+                  </span>
+                </div>
+              }
+            >
+              <ErrorBoundary
+                fallback={
+                  <div className="h-full bg-background-deeper/50 flex items-center justify-center px-2">
+                    <span className="text-text/60 text-xs">
+                      Volume unavailable
+                    </span>
+                  </div>
+                }
+              >
+                <VolumeControl
+                  playbackDevice={
+                    checkProviderOutput(output.audio?.defaultPlaybackDevice)
+                      ? { volume: output.audio.defaultPlaybackDevice.volume }
+                      : null
+                  }
+                  setVolume={withDefault(
+                    output.audio?.setVolume,
+                    async () => {},
+                  )}
+                  statIconClassnames={statIconClassnames}
+                />
+              </ErrorBoundary>
+            </Suspense>
+          </div>
         </div>
 
         <div className="flex items-center h-full">
-          <SystemStats
-            cpu={output.cpu}
-            memory={output.memory}
-            weather={output.weather}
-            statIconClassnames={statIconClassnames}
-          />
+          <Suspense
+            fallback={
+              <div className="h-full w-20 bg-background-deeper/50 animate-pulse rounded flex items-center justify-center">
+                <span className="text-text/60 text-xs">Loading stats...</span>
+              </div>
+            }
+          >
+            <ErrorBoundary
+              fallback={
+                <div className="h-full bg-background-deeper/50 flex items-center justify-center px-2">
+                  <span className="text-text/60 text-xs">
+                    Stats unavailable
+                  </span>
+                </div>
+              }
+            >
+              <SystemStats
+                cpu={output.cpu}
+                memory={output.memory}
+                statIconClassnames={statIconClassnames}
+              />
+            </ErrorBoundary>
+          </Suspense>
         </div>
 
-        <div className="h-full flex items-center px-0.5 pr-1">
-          {/* <Systray systray={output.systray ?? null} /> */}
-        </div>
+        {/*<div className="h-full flex items-center px-0.5 pr-1">
+          <Suspense fallback={
+            <div className="h-full w-16 bg-background-deeper/50 animate-pulse rounded flex items-center justify-center">
+              <span className="text-text/60 text-xs">Loading systray...</span>
+            </div>
+          }>
+            <Systray systray={withDefault(output.systray, null)} />
+          </Suspense>
+        </div>*/}
 
         <div className="h-full flex items-center justify-center pr-2">
-          <DateDisplay formattedDate={formattedDate} />
+          <Suspense
+            fallback={
+              <div className="h-full w-20 bg-background-deeper/50 animate-pulse rounded flex items-center justify-center">
+                <span className="text-text/60 text-xs">Loading date...</span>
+              </div>
+            }
+          >
+            <DateDisplay formattedDate={formattedDate} />
+          </Suspense>
         </div>
       </div>
     </div>

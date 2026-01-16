@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { MediaSession } from "zebar";
 import { motion } from "framer-motion";
+import { debounce } from "../../../utils/performance";
+import { safeNumber, withDefault } from "../../../utils/safety";
 
 export function ProgressBar({
   currentSession,
@@ -8,12 +10,12 @@ export function ProgressBar({
   currentSession: MediaSession | undefined;
 }) {
   const [progress, setProgress] = useState<number>(
-    currentSession?.position ?? 0
+    safeNumber(currentSession?.position, 0)
   );
 
   const progressPercentage = useMemo(() => 
     currentSession
-      ? `${(progress / currentSession?.endTime) * 100 || 0}%`
+      ? `${(progress / withDefault(currentSession?.endTime, 1)) * 100 || 0}%`
       : "0%",
     [progress, currentSession]
   );
@@ -27,13 +29,19 @@ export function ProgressBar({
     setProgress(currentSession.position);
   }, [currentSession]);
 
+  // Debounced progress update to reduce unnecessary re-renders
+  const debouncedUpdateProgress = useMemo(
+    () => debounce(updateProgress, 100),
+    [updateProgress]
+  );
+
   useEffect(() => {
     updateProgress();
 
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (!currentSession?.isPlaying) return prev;
-        if (prev < (currentSession?.endTime ?? 0)) {
+        if (prev < withDefault(currentSession?.endTime, 0)) {
           return prev + 1;
         }
         clearInterval(interval);

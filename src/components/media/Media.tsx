@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useRef } from "react";
 import { MediaOutput } from "zebar";
 import { cn } from "../../utils/cn";
 import { Chip } from "../common/Chip";
@@ -17,7 +17,7 @@ type MediaProps = {
 // zebarCurrentSession: The actual session given from the Media provider.
 // currentSession: Our own local state of Zebar session.
 // This is not ideal and hopefully future Zebar releases will provide a way to change sessions internally.
-export default function Media({ media }: MediaProps) {
+export function Media({ media }: MediaProps) {
   if (!media) return null;
 
   const {
@@ -35,8 +35,12 @@ export default function Media({ media }: MediaProps) {
     [allSessions, zebarCurrentSession?.sessionId]
   );
 
-  const [currentSessionIdx, setCurrentSessionIdx] = React.useState<number>(
+  const sessionIdxRef = useRef<number>(
     zebarCurrentSessionIdx === -1 ? 0 : zebarCurrentSessionIdx
+  );
+
+  const [currentSessionIdx, setCurrentSessionIdx] = React.useState<number>(
+    sessionIdxRef.current
   );
 
   const currentSession = useMemo(
@@ -59,9 +63,9 @@ export default function Media({ media }: MediaProps) {
       }
 
       if (e.altKey) {
-        setCurrentSessionIdx((prev) =>
-          prev < allSessions.length - 1 ? prev + 1 : 0
-        );
+        const nextIndex = sessionIdxRef.current < allSessions.length - 1 ? sessionIdxRef.current + 1 : 0;
+        sessionIdxRef.current = nextIndex;
+        setCurrentSessionIdx(nextIndex);
         return;
       }
 

@@ -10,6 +10,7 @@ export enum PlayPauseState {
 export enum StatusAction {
   Previous = "previous",
   Next = "next",
+  Switch = "switch",
 }
 
 const iconVariants = {

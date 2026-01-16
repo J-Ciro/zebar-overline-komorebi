@@ -10,7 +10,7 @@ interface StatProps {
   type: "ring" | "inline";
 }
 
-export default function Stat(props: StatProps) {
+export function Stat(props: StatProps) {
   const { type, ...p } = props;
   switch (type) {
     case "ring":

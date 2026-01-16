@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "../../../utils/cn";
-import { smoothAnimations } from "../../../utils/animations";
+import { smoothAnimations } from "../../../utils/useAnimation";
 
 interface IconButtonProps {
   icon: LucideIcon;

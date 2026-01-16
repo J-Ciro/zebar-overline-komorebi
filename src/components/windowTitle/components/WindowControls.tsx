@@ -6,7 +6,7 @@ import { Maximize2, Minimize2, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { KomorebiOutput } from "zebar";
 import { shellExec } from "zebar";
-import { buttonVariants, menuVariants, smoothAnimations } from "../../../utils/animations";
+import { buttonVariants, menuVariants, smoothAnimations } from "../../../utils/useAnimation";
 
 interface WindowControlsProps {
   komorebi: KomorebiOutput;

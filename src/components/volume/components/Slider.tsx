@@ -1,15 +1,23 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { cn } from "../../../utils/cn";
+import { debounce } from "../../../utils/performance";
+import { useAnimation } from "../../../utils/useAnimation";
 
 interface SliderProps {
   value: number;
   setValue: (value: number) => void;
 }
 
-export default function Slider({ value, setValue }: SliderProps) {
+export function Slider({ value, setValue }: SliderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
+
+  // Debounced update to reduce rapid volume changes during drag
+  const debouncedSetValue = useMemo(
+    () => debounce((value: number) => setValue(value), 50) as (value: number) => void,
+    [setValue]
+  );
 
   const updateValue = useCallback((e: React.MouseEvent | MouseEvent) => {
     if (!sliderRef.current) return;
@@ -17,8 +25,15 @@ export default function Slider({ value, setValue }: SliderProps) {
     const rect = sliderRef.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left;
     const percentage = Math.min(Math.max((offsetX / rect.width) * 100, 0), 100);
-    setValue(Math.round(percentage));
-  }, [setValue]);
+    const roundedValue = Math.round(percentage);
+    
+    // During dragging, use debounced updates for smoother performance
+    if (isDragging) {
+      debouncedSetValue(roundedValue);
+    } else {
+      setValue(roundedValue);
+    }
+  }, [setValue, debouncedSetValue, isDragging]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     setIsDragging(true);
@@ -79,13 +94,7 @@ export default function Slider({ value, setValue }: SliderProps) {
       <motion.div
         className={progressBarClassName}
         initial={{ width: `${value}%` }}
-        animate={{ width: `${value}%` }}
-        transition={{ 
-          type: "spring",
-          stiffness: 200,
-          damping: 20,
-          mass: 0.5
-        }}
+        {...useAnimation().createWidthAnimation(value, useAnimation().springConfigs.medium)}
       />
       <motion.div
         className={thumbClassName}

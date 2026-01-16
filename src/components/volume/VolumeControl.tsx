@@ -1,9 +1,11 @@
+import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Volume, Volume1, Volume2 } from "lucide-react";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "../../utils/cn";
 import { Chip } from "../common/Chip";
-import Slider from "./components/Slider";
+import { Slider } from "./components/Slider";
+import { safeNumber } from "../../utils/safety";
 
 interface VolumeControlProps {
   playbackDevice: {
@@ -13,7 +15,7 @@ interface VolumeControlProps {
   statIconClassnames: string;
 }
 
-export default function VolumeControl({
+export const VolumeControl = React.memo(function VolumeControl({
   playbackDevice,
   statIconClassnames,
   setVolume,
@@ -36,8 +38,8 @@ export default function VolumeControl({
       return;
     }
 
-    setExpanded(prev => !prev);
-  }, [playbackDevice, setVolume]);
+    setExpanded((prevExpanded) => !prevExpanded);
+  }, [playbackDevice]);
 
   const renderIcon = useCallback(() => {
     if (!playbackDevice) return null;
@@ -118,7 +120,7 @@ export default function VolumeControl({
                   damping: 20
                 }}
               >
-                <Slider value={playbackDevice?.volume ?? 0} setValue={setVolume} />
+                <Slider value={safeNumber(playbackDevice?.volume, 0)} setValue={setVolume} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -134,4 +136,4 @@ export default function VolumeControl({
       </div>
     </Chip>
   );
-}
+});

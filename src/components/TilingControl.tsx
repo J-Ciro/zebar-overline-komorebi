@@ -1,4 +1,4 @@
-import type React from "react";
+import React from "react";
 import { ChevronRight, Search, LayoutGrid } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState } from "react";
@@ -6,7 +6,7 @@ import { Button } from "./common/Button";
 import { cn } from "../utils/cn";
 import type { KomorebiOutput } from "zebar";
 import { shellExec } from "zebar";
-import { smoothAnimations } from "../utils/animations";
+import { smoothAnimations } from "../utils/useAnimation";
 
 interface TilingControlProps {
   komorebi?: KomorebiOutput | null;
@@ -46,7 +46,7 @@ const toCliFormat = (layoutKey: string): string => {
   return LAYOUT_TO_CLI[layoutKey] || "bsp";
 };
 
-export function TilingControl({ komorebi }: TilingControlProps = {}) {
+export const TilingControl = React.memo(function TilingControl({ komorebi }: TilingControlProps = {}) {
   const [expanded, setExpanded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
@@ -115,14 +115,7 @@ export function TilingControl({ komorebi }: TilingControlProps = {}) {
     }
   };
 
-  // const handleLaunchFlowLauncher = async () => {
-  //   try {
-  //     await shellExec("flow-launcher.exe");
-  //   } catch (error) {
-  //     console.error("Failed to launch Flow Launcher:", error);
-  //     setLastError("Failed to launch Flow Launcher");
-  //   }
-  // };
+
 
   const getFlipIcon = () => {
     const flip = komorebi?.focusedWorkspace?.layoutFlip;
@@ -214,7 +207,8 @@ export function TilingControl({ komorebi }: TilingControlProps = {}) {
                   animate="animate"
                   exit="exit"
                   transition={{
-                    ...smoothAnimations.scaleInOut.transition,
+                    duration: 0.3,
+                    ease: [0.25, 0.46, 0.45, 0.94],
                     delay: index * 0.02,
                   }}
                 >
@@ -232,4 +226,4 @@ export function TilingControl({ komorebi }: TilingControlProps = {}) {
       </AnimatePresence>
     </div>
   );
-}
+});

@@ -1,5 +1,6 @@
 import { animate, AnimatePresence, motion, useMotionTemplate, useMotionValue, useTransform } from 'framer-motion';
 import React, { ReactElement, useEffect } from 'react';
+import { useAnimation, springConfigs } from '../../../utils/useAnimation';
 
 interface ExpandingCarouselProps {
   items: ReactElement[];
@@ -10,12 +11,7 @@ interface ExpandingCarouselProps {
   fadeEdgeOffset?: number;
 }
 
-const springConfig = {
-  type: 'spring',
-  stiffness: 150,
-  damping: 20,
-  mass: 0.8,
-};
+
 
 export const ExpandingCarousel: React.FC<ExpandingCarouselProps> = ({
   items,
@@ -53,14 +49,14 @@ export const ExpandingCarousel: React.FC<ExpandingCarouselProps> = ({
           WebkitMaskRepeat: 'no-repeat',
           maskSize: '100% 100%',
           maskRepeat: 'no-repeat',
-        }} transition={springConfig}
+        }} transition={springConfigs.soft}
       >
         <motion.div
           className="flex"
           initial={false}
           style={{ gap: `${gap}px` }}
           animate={{ x: expanded ? 0 : initialOffset }}
-          transition={springConfig}
+          transition={springConfigs.soft}
           layout
         >
           <AnimatePresence mode="sync">
@@ -75,7 +71,7 @@ export const ExpandingCarousel: React.FC<ExpandingCarouselProps> = ({
                 whileHover={{ opacity: 1 }}
                 exit={{ opacity: 0, scale: 0 }}
                 transition={{
-                  ...springConfig,
+                  ...springConfigs.soft,
                   delay: index * 0.08,
                   layout: {
                     type: "spring",
